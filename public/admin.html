@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Channel API</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/admin.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="logo" data-icon="shield"></div><div>Channel API<small>Admin Panel</small></div></div>
+      <nav class="nav" id="nav">
+        <a href="/admin" data-view="dashboard" data-icon="home" data-icon-gap>Dashboard</a>
+        <a href="/admin/users" data-view="users" data-icon="users" data-icon-gap>Watumiaji</a>
+        <a href="/admin/packages" data-view="packages" data-icon="package" data-icon-gap>Vifurushi</a>
+        <a href="/admin/channels" data-view="channels" data-icon="radio" data-icon-gap>Channels</a>
+        <a href="/admin/amiri" data-view="amiri" data-icon="radio" data-icon-gap>amiriChannel</a>
+        <a href="/admin/proxy" data-view="proxy" data-icon="link" data-icon-gap>Proxy link</a>
+        <a href="/admin/bein" data-view="bein" data-icon="play" data-icon-gap>beinProxy</a>
+        <a href="/admin/payments" data-view="payments" data-icon="wallet" data-icon-gap>Malipo</a>
+        <a href="/admin/clickpesa" data-view="clickpesa" data-icon="sliders" data-icon-gap>ClickPesa</a>
+        <a href="/admin/settings" data-view="settings" data-icon="sliders" data-icon-gap>Mipangilio</a>
+        <a href="/admin/audit" data-view="audit" data-icon="file" data-icon-gap>Audit Logs</a>
+        <div class="sep"></div>
+        <a href="/docs" data-icon="book" data-icon-gap>API Docs</a>
+      </nav>
+      <div class="foot nav"><button type="button" data-logout data-icon="logout" data-icon-gap>Toka</button></div>
+    </aside>
+    <div class="scrim"></div>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="row">
+          <button class="btn icon menu-btn" type="button" aria-label="Menyu" data-icon="menu"></button>
+          <h1 id="title">Dashboard</h1>
+        </div>
+        <div class="row">
+          <button class="btn icon" data-theme-btn type="button"></button>
+          <div class="userchip"><div class="avatar" id="avatar">A</div><span class="name" id="uname"></span></div>
+        </div>
+      </div>
+      <div id="root"><div class="loader"><span class="spin"></span></div></div>
+    </main>
+  </div>
+</body>
+</html>

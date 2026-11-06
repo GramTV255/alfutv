@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jisajili — Channel API</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/auth.js" defer></script>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="card auth-card">
+      <a class="brand" href="/"><div class="logo" data-icon="radio"></div><div>Channel API</div></a>
+      <h1>Fungua akaunti</h1>
+      <p class="sub">Dakika moja tu. Unapata API Key yako binafsi.</p>
+      <div id="msg"></div>
+      <form id="register-form" novalidate>
+        <div class="field">
+          <label for="fullName">Jina kamili</label>
+          <div class="input-icon" data-icon="user"><input class="input" id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Juma Hassan" required maxlength="120"></div>
+        </div>
+        <div class="field">
+          <label for="phone">Namba ya simu</label>
+          <div class="input-icon" data-icon="phone"><input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="username" placeholder="0712 345 678" required></div>
+          <div class="hint">Mfano: 0712345678 au 255712345678</div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-icon" data-icon="lock"><input class="input" id="password" name="password" type="password" autocomplete="new-password" placeholder="Angalau herufi 8, herufi na namba" required minlength="8"></div>
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Thibitisha password</label>
+          <div class="input-icon" data-icon="lock"><input class="input" id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required></div>
+        </div>
+        <button class="btn primary block" type="submit">Jisajili</button>
+      </form>
+      <p class="auth-foot">Una akaunti tayari? <a href="/login">Ingia</a></p>
+    </div>
+  </div>
+</body>
+</html>

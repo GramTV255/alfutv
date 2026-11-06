@@ -1,0 +1,36 @@
+# Wasmer Edge app config example (adjust name/package to your account).
+# Note: a wasmer.toml for Node.js (from `wasmer app create`) is also required.
+kind: wasmer.io/App.v0
+name: your-app-name
+package: your-namespace/your-package
+debug: true          # shows the real error on 500 pages; set to false once everything works
+capabilities:
+  database:
+    engine: postgres   # Wasmer injects DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD
+env:
+  NODE_ENV: "production"
+  PORT: "80"
+  TRUST_PROXY: "1"
+  APP_URL: "https://your-app.wasmer.app"
+  JWT_SECRET: "<from npm run gen-secrets>"
+  ENCRYPTION_KEY: "<64 hex chars from npm run gen-secrets>"
+  CRON_SECRET: "<long random string>"
+  ADMIN_NAME: "Admin"
+  ADMIN_PHONE: "0712345678"
+  ADMIN_PASSWORD: "<10+ chars, letters and numbers; remove after first login>"
+
+# Platform cron: wakes the app and makes it request every source that is due (default every 3 minutes),
+# even when nobody has the site open. The secret must equal the CRON_SECRET above.
+jobs:
+  - name: channel-tick
+    trigger: '* * * * *'        # every minute (each source still uses its own interval, default 3 min); use '*/3 * * * *' if every-minute is not allowed
+    action:
+      fetch:
+        path: /api/cron/tick
+        method: GET
+        headers:
+          - name: x-cron-secret
+            value: "<same value as CRON_SECRET>"
+        timeout: '2m'
+        expect:
+          status_codes: [200, 202]

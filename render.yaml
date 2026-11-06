@@ -1,0 +1,33 @@
+# Render Blueprint: Web service (Node) + PostgreSQL. New -> Blueprint -> connect your Git repo.
+services:
+  - type: web
+    name: channel-api
+    runtime: node
+    plan: starter            # jobs run inside the app, so avoid plans that sleep
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATABASE_URL
+        fromDatabase: { name: channel-db, property: connectionString }
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY      # replace with 64 hex chars from: npm run gen-secrets
+        sync: false
+      - key: PUBLIC_BASE_URL     # e.g. https://channel-api.onrender.com
+        sync: false
+      - key: ALLOWED_SOURCE_HOSTS
+        sync: false
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_PHONE
+        sync: false
+      - key: ADMIN_PASSWORD      # remove after the first login
+        sync: false
+databases:
+  - name: channel-db
+    plan: basic-256mb

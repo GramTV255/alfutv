@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API Documentation — Channel API</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/docs.js" defer></script>
+</head>
+<body>
+  <header class="pub-nav">
+    <a class="brand" href="/" style="padding:0"><div class="logo" data-icon="radio"></div><div>Channel API<small>Documentation</small></div></a>
+    <nav class="links" id="top-links">
+      <button class="btn sm icon" data-theme-btn type="button"></button>
+    </nav>
+  </header>
+
+  <div class="docs-hero">
+    <span class="pill" data-icon="book" data-icon-gap>API v1</span>
+    <h1>API Documentation</h1>
+    <p class="lead">Pata MPD link, token na ClearKey ya kila channel kwa ombi moja la <code>GET</code>, ukitumia API Key yako binafsi.</p>
+    <div class="docs-quick">
+      <div><span class="method">GET</span><code>/api/v1/amiri/<b>{jina}</b></code></div>
+      <div class="muted">Header: <code>X-API-Key</code></div>
+    </div>
+  </div>
+
+  <div class="docs">
+    <nav>
+      <a href="#overview">Muhtasari</a><a href="#auth">Authentication</a><a href="#endpoint">Endpoints</a><a href="#sources">Sources (channels)</a>
+      <a href="#response">Response</a><a href="#errors">Error Codes</a><a href="#examples">Mifano</a><a href="#limits">Mipaka & Kifurushi</a>
+    </nav>
+    <main>
+      <section id="overview">
+        <h2>Muhtasari</h2>
+        <div class="grid cols-3">
+          <div class="card feature"><div class="fi" data-icon="key"></div><h3>API Key binafsi</h3><p class="muted">Kila mtumiaji ana key yake. Inatumwa kwenye header, si kwenye URL.</p></div>
+          <div class="card feature"><div class="fi" data-icon="radio"></div><h3>Endpoint kwa kila source</h3><p class="muted">Kila source ina jina (slug) na ID yake, kwa hivyo zinatofautiana.</p></div>
+          <div class="card feature"><div class="fi" data-icon="shield"></div><h3>Data mpya</h3><p class="muted">Seva inasasisha vyanzo kila dakika chache, kwa hivyo token na ClearKey ni mpya.</p></div>
+        </div>
+        <p class="muted mt">Mifano yote hapa ni ya kubuni — si token halisi.</p>
+      </section>
+
+      <section id="auth">
+        <h2>Authentication</h2>
+        <p>Tuma API Key yako kwenye HTTP header <code>X-API-Key</code>. Usiiweke kwenye URL.</p>
+        <pre>X-API-Key: YOUR_PERSONAL_API_KEY</pre>
+        <p class="muted">Pata key yako kwenye Dashboard → API Key. Key kamili inaonyeshwa mara moja tu; seva inahifadhi hash yake.</p>
+      </section>
+
+      <section id="endpoint">
+        <h2>Endpoints</h2>
+        <p class="muted">Base URL: <code id="base-url">https://your-domain.example/api/v1</code> (tumia HTTPS pekee).</p>
+        <div class="ep"><span class="method">GET</span><code>/api/v1/amiri/{jina}</code><p class="muted">Channel moja kwa jina lake (mfano <code>azam-sports-1</code>). Kila channel ina endpoint yake; hakuna endpoint ya kupata zote kwa pamoja. Inarudisha <code>mpd_url</code> yenye token mpya, pamoja na ClearKey. Majina ya channels zako yanaonekana kwenye Dashboard.</p></div>
+        <table class="mt"><thead><tr><th>Sehemu</th><th>Maelezo</th></tr></thead><tbody>
+          <tr><td>Header (lazima)</td><td><code>X-API-Key</code></td></tr>
+          <tr><td>Query (hiari)</td><td><code>format=text</code> — majibu kama mistari ya maandishi badala ya JSON</td></tr>
+        </tbody></table>
+        <p class="muted mt">Seva inakagua: key ni halali, akaunti haijasimamishwa, kifurushi ni ACTIVE na hakijaisha, channel inatumika, na token ni mpya (inachukuliwa kila ombi).</p>
+      </section>
+
+      <section id="sources">
+        <h2>Channels</h2>
+        <p class="muted">Orodha ya endpoint za channels zinazopatikana sasa.</p>
+        <div id="sources-box" class="card"><p class="muted" id="sources-hint">Ingia ili uone orodha ya channels zako, au angalia Dashboard.</p></div>
+      </section>
+
+      <section id="response">
+        <h2>Response</h2>
+        <p>Mafanikio: <code>200 OK</code>, <code>application/json</code>.</p>
+        <pre>{
+  "channel": "Channel Name",
+  "id": 1,
+  "slug": "channel-name",
+  "mpd_url": "https://example.com/.../manifest.mpd?token=EXAMPLE",
+  "token": "EXAMPLE_TOKEN",
+  "clearkey": "KID_HEX:KEY_HEX",
+  "clearkeys": { "KID_HEX": "KEY_HEX" },
+  "expires_at": "2026-01-01T12:00:00.000Z"
+}</pre>
+        <table><thead><tr><th>Field</th><th>Maana</th></tr></thead><tbody>
+          <tr><td><code>mpd_url</code></td><td>Link ya MPD ya kucheza</td></tr>
+          <tr><td><code>token</code></td><td>Token iliyomo kwenye link</td></tr>
+          <tr><td><code>clearkey</code></td><td>ClearKey ya kwanza, <code>kid:key</code></td></tr>
+          <tr><td><code>clearkeys</code></td><td>Funguo zote kama <code>{ kid: key }</code> (Shaka / ExoPlayer)</td></tr>
+          <tr><td><code>expires_at</code></td><td>Muda ambao token inaisha</td></tr>
+        </tbody></table>
+        <p class="muted mt">Majibu hayahifadhiwi kwenye cache (<code>Cache-Control: no-store</code>).</p>
+      </section>
+
+      <section id="errors">
+        <h2>Error Codes</h2>
+        <table><thead><tr><th>Code</th><th>Maana</th><th>Cha kufanya</th></tr></thead><tbody>
+          <tr><td><span class="badge bad">401</span></td><td>API Key haipo au si sahihi</td><td>Hakikisha header <code>X-API-Key</code></td></tr>
+          <tr><td><span class="badge bad">403</span></td><td>Hakuna kifurushi kinachotumika, kimeisha, au akaunti imesimamishwa</td><td>Lipia au ongeza kifurushi</td></tr>
+          <tr><td><span class="badge warn">404</span></td><td>Channel haipo</td><td>Angalia jina la channel</td></tr>
+          <tr><td><span class="badge warn">429</span></td><td>Maombi mengi mno</td><td>Subiri kidogo, jaribu tena</td></tr>
+          <tr><td><span class="badge warn">503</span></td><td>Chanzo hakipatikani kwa sasa</td><td>Jaribu tena baada ya muda</td></tr>
+        </tbody></table>
+      </section>
+
+      <section id="examples">
+        <h2>Mifano</h2>
+        <h3>cURL</h3>
+        <pre id="ex-curl">curl -H "X-API-Key: YOUR_PERSONAL_API_KEY" https://your-domain.example/api/v1/amiri/azam-sports-1</pre>
+        <h3>JavaScript</h3>
+        <pre id="ex-js">const res = await fetch('https://your-domain.example/api/v1/amiri/azam-sports-1', {
+  headers: { 'X-API-Key': 'YOUR_PERSONAL_API_KEY' },
+});
+if (res.status === 200) {
+  const { mpd_url, clearkey, clearkeys } = await res.json();
+} else if (res.status === 403) {
+  // kifurushi hakipo au kimeisha
+}</pre>
+        <h3>Python</h3>
+        <pre id="ex-py">import requests
+r = requests.get("https://your-domain.example/api/v1/amiri/azam-sports-1",
+                 headers={"X-API-Key": "YOUR_PERSONAL_API_KEY"}, timeout=10)
+print(r.status_code, r.json())</pre>
+      </section>
+
+      <section id="limits">
+        <h2>Mipaka & Kifurushi</h2>
+        <p>Kila key ina kikomo cha maombi kwa dakika. Ukivuka unapata <code>429</code>. Key inafanya kazi tu wakati kifurushi chako ni ACTIVE; kikiisha, key inakuwa INACTIVE hadi ulipie tena.</p>
+        <p class="muted">Tumia data hii kwa vyanzo na maudhui ulivyoidhinishwa kutumia pekee.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

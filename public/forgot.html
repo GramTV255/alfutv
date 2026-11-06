@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weka password mpya — Channel API</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/auth.js" defer></script>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="card auth-card">
+      <a class="brand" href="/"><div class="logo" data-icon="radio"></div><div>Channel API</div></a>
+      <h1>Password mpya</h1>
+      <p class="sub">Omba reset, kisha tumia code utakayopewa na msimamizi baada ya kuthibitisha kuwa akaunti ni yako.</p>
+      <div id="msg"></div>
+
+      <div class="tabs" style="margin-bottom:18px;width:100%">
+        <button type="button" class="active" data-tab="ask" style="flex:1">1. Omba reset</button>
+        <button type="button" data-tab="use" style="flex:1">2. Nina code</button>
+      </div>
+
+      <form id="forgot-form" novalidate>
+        <div class="field">
+          <label for="f-phone">Namba ya simu ya akaunti</label>
+          <div class="input-icon" data-icon="phone"><input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="username" placeholder="0712 345 678" required></div>
+        </div>
+        <button class="btn primary block" type="submit">Tuma ombi</button>
+      </form>
+
+      <form id="reset-form" class="hidden" novalidate>
+        <div class="field">
+          <label for="r-phone">Namba ya simu</label>
+          <div class="input-icon" data-icon="phone"><input class="input" id="r-phone" name="phone" type="tel" inputmode="tel" autocomplete="username" required></div>
+        </div>
+        <div class="field">
+          <label for="r-code">Code ya reset</label>
+          <input class="input mono" id="r-code" name="code" type="text" autocomplete="one-time-code" placeholder="XXXXX-XXXXX" required maxlength="20">
+        </div>
+        <div class="field">
+          <label for="r-pw">Password mpya</label>
+          <div class="input-icon" data-icon="lock"><input class="input" id="r-pw" name="newPassword" type="password" autocomplete="new-password" required minlength="8"></div>
+        </div>
+        <div class="field">
+          <label for="r-pw2">Thibitisha password mpya</label>
+          <div class="input-icon" data-icon="lock"><input class="input" id="r-pw2" name="confirmPassword" type="password" autocomplete="new-password" required></div>
+        </div>
+        <button class="btn primary block" type="submit">Weka password mpya</button>
+      </form>
+      <p class="auth-foot"><a href="/login">← Rudi kuingia</a></p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Channel API — Pata ufikiaji wa API kwa usalama</title>
+  <meta name="description" content="Channel API: API Key binafsi, malipo kupitia ClickPesa, na ufikiaji wa haraka wa API kwa vifurushi vya muda.">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/home.js" defer></script>
+</head>
+<body>
+  <header class="pub-nav">
+    <a class="brand" href="/" style="padding:0"><div class="logo" data-icon="radio"></div><div>Channel API<small>Ufikiaji wa API</small></div></a>
+    <nav class="links">
+      <a class="btn sm" href="/docs" data-icon="book" data-icon-gap>Docs</a>
+      <button class="btn sm icon" data-theme-btn type="button"></button>
+      <a class="btn sm" href="/login" data-guest>Ingia</a>
+      <a class="btn sm primary" href="/register" data-guest>Jisajili</a>
+      <a class="btn sm primary hidden" href="/dashboard" id="nav-me"></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="home-hero">
+      <div>
+        <h1>Channel zako zote, kwa ombi moja la API.</h1>
+        <p class="lead">Jisajili kwa namba ya simu, lipia kifurushi kwa M-Pesa, Mixx by Yas, Airtel Money au Halopesa, kisha upate MPD link, token na ClearKey papo hapo malipo yakithibitishwa.</p>
+        <div class="cta">
+          <a class="btn primary" href="/register" id="cta-start" data-icon="zap" data-icon-gap>Anza sasa</a>
+          <a class="btn" href="/docs" data-icon="book" data-icon-gap>Soma API Docs</a>
+        </div>
+        <p class="methods">API Key binafsi. Malipo yanathibitishwa na seva, si browser.</p>
+      </div>
+      <div class="signal-card" aria-label="Mfano wa jibu la API">
+        <div class="bar"><span class="live"><i></i>Mfano wa jibu</span><span class="badge ok">200 OK</span></div>
+        <div class="req"><b>GET</b>/api/v1/amiri/{jina}</div>
+<pre>{
+  "count": 2,
+  "channels": [
+    {
+      "channel": "Channel One",
+      "slug": "channel-one",
+      "mpd_url": "https://…/manifest.mpd?token=…",
+      "clearkey": "KID:KEY",
+      "expires_at": "2026-01-01T12:00:00Z"
+    },
+    { "channel": "Channel Two", … }
+  ]
+}</pre>
+        <div class="foot">Data ya mfano. Haina token halisi.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Unachopata kwenye akaunti yako</h2>
+      <p class="sub">Kila kitu cha kusimamia ufikiaji wako wa API kiko mahali pamoja.</p>
+      <div class="rows">
+        <div class="r"><div class="fi" data-icon="key"></div><h3>API Key binafsi</h3><p>Key yako ni yako peke yako. Unaweza kuibadilisha au kuifuta wakati wowote.</p></div>
+        <div class="r"><div class="fi" data-icon="radio"></div><h3>Endpoint kwa kila channel</h3><p>Kila channel ina jina na namba yake, na kuna endpoint moja ya kupata zote kwa pamoja.</p></div>
+        <div class="r"><div class="fi" data-icon="wallet"></div><h3>Malipo ya simu</h3><p>Unapokea ombi la PIN kwenye simu. Malipo yakithibitishwa, key yako inawaka mara moja.</p></div>
+        <div class="r"><div class="fi" data-icon="clock"></div><h3>Vifurushi vya muda</h3><p>Siku, wiki au mwezi. Ukilipia kabla kifurushi hakijaisha, muda unaongezwa.</p></div>
+        <div class="r"><div class="fi" data-icon="activity"></div><h3>Historia ya matumizi</h3><p>Ona kila ombi la API: lililofanikiwa, lililoshindwa, na saa lilipofanyika.</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Inafanyaje kazi</h2>
+      <p class="sub">Hatua nne kutoka kujisajili hadi kupata data.</p>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h3>Jisajili</h3><p>Jina, namba ya simu na password. Unapata API Key yako.</p></div>
+        <div class="step"><div class="n">2</div><h3>Chagua kifurushi</h3><p>Angalia bei na muda wa kila kifurushi kwenye dashboard.</p></div>
+        <div class="step"><div class="n">3</div><h3>Lipia kwa simu</h3><p>Thibitisha kwa PIN. Malipo yakikamilika, key inawaka.</p></div>
+        <div class="step"><div class="n">4</div><h3>Tumia API</h3><p>Tuma <code>X-API-Key</code> kwenye <code>GET /api/v1/amiri/{jina}</code>.</p></div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">© <span id="yr"></span> Channel API System. Haki zote zimehifadhiwa.</footer>
+  <script src="/js/year.js" defer></script>
+</body>
+</html>
