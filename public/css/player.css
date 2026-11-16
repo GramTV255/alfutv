@@ -1,0 +1,65 @@
+/* Player - muonekano kama mfano wa mteja (glass, center play, settings, loading, error) */
+body.live{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#000;color:#fff;overflow:hidden;margin:0}
+.player-wrap{position:fixed;inset:0;background:#000;overflow:hidden;overflow:clip;contain:layout paint}
+html:has(body.live){overflow:hidden;overscroll-behavior:none}
+#videoPlayer{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+.glass{background:rgba(15,15,20,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.1)}
+#controlsOverlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;transition:opacity .5s ease;z-index:10}
+.controls-hidden{opacity:0!important;pointer-events:none;cursor:none}
+.top-bar{padding:16px;padding-top:calc(16px + env(safe-area-inset-top));background:linear-gradient(to bottom,rgba(0,0,0,.85),transparent);display:flex;align-items:center;gap:12px}
+.back-btn,.menu-btn{padding:8px;border-radius:50%;background:transparent;border:none;color:#fff;cursor:pointer;transition:.2s;display:grid;place-items:center}
+.back-btn:hover,.menu-btn:hover{background:rgba(255,255,255,.12)}
+.menu-btn{margin-left:auto;background:rgba(255,255,255,.1)}
+#chLogo{width:44px;height:44px;flex:none;object-fit:cover;border-radius:13px;background:rgba(255,255,255,.1);padding:0;display:block}#chLogo[hidden]{display:none}
+.ch-title{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0}.ch-title #chName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-badge{background:#ef4444;font-size:8px;padding:2px 6px;border-radius:20px;font-weight:900;letter-spacing:1px;animation:plpulse 1s infinite;display:none}
+@keyframes plpulse{0%,100%{opacity:1}50%{opacity:.6}}@keyframes plspin{to{transform:rotate(360deg)}}
+.center-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:11}
+.center-play button{width:72px;height:72px;border-radius:50%;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.2);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.3s;backdrop-filter:blur(4px)}
+.center-play button:hover{background:rgba(0,0,0,.7);transform:scale(1.1)}.center-play button:active{transform:scale(.95)}
+.bottom-bar{padding:12px 16px calc(20px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(0,0,0,.9),transparent)}
+.progress-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.time-text{font-size:10px;font-family:monospace;color:rgba(255,255,255,.7);min-width:36px}
+#progressBar{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.2);border-radius:4px;cursor:pointer;outline:none}
+#progressBar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary,#6366f1);cursor:pointer}
+#progressBar::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary,#6366f1);border:none;cursor:pointer}
+.controls-row{display:flex;align-items:center;justify-content:space-between}.ctrl-group{display:flex;align-items:center;gap:8px}
+.ctrl-btn{background:none;border:none;color:#fff;cursor:pointer;padding:8px;border-radius:50%;transition:.2s;display:flex;align-items:center;justify-content:center}.ctrl-btn:hover{background:rgba(255,255,255,.1)}.ctrl-btn svg{width:22px;height:22px}
+#volumeBar{width:70px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.2);border-radius:4px;cursor:pointer;outline:none}
+#volumeBar::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;cursor:pointer}
+#loading{position:absolute;inset:0;background:#0f0f1a;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s}
+.spinner-wrap{position:relative;margin-bottom:28px}.spinner{width:80px;height:80px;border:4px solid rgba(255,255,255,.08);border-top-color:var(--primary,#6366f1);border-radius:50%;animation:plspin 1s linear infinite}
+.spinner-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}.spinner-icon svg{width:32px;height:32px;color:var(--primary,#6366f1)}.spinner-icon img{width:62px;height:62px;object-fit:cover;border-radius:50%}
+.loading-title{font-weight:800;font-size:16px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;text-align:center;padding:0 20px}
+.loading-sub{color:var(--primary,#6366f1);font-size:12px;font-weight:500;animation:plpulse 1.5s infinite}
+.error-panel{display:none;position:absolute;inset:0;background:rgba(0,0,0,.95);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center}.error-panel.active{display:flex}
+.err-icon{width:64px;height:64px;border-radius:50%;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;margin-bottom:16px}.err-icon svg{width:28px;height:28px;color:#ef4444}
+.err-title{font-size:18px;font-weight:800;margin-bottom:6px}.err-msg{font-size:13px;color:#9ca3af;max-width:300px;line-height:1.6;margin-bottom:20px}
+.err-detail{font-size:10px;color:#6b7280;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 12px;margin-top:12px;word-break:break-all;max-width:320px}
+.retry-btn{padding:12px 28px;background:var(--primary,#6366f1);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;transition:.3s}.retry-btn:hover{transform:translateY(-2px)}
+.settings-panel{display:none;position:absolute;bottom:90px;right:16px;z-index:50;border-radius:14px;padding:18px;width:220px;max-height:50vh;overflow-y:auto}.settings-panel.active{display:block}
+.settings-title{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--primary,#6366f1);margin-bottom:10px}.settings-section{margin-bottom:14px}
+.settings-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;letter-spacing:1px}
+.quality-btn{display:block;width:100%;text-align:left;padding:7px 10px;border:none;background:transparent;color:#d1d5db;font-size:11px;cursor:pointer;border-radius:6px;transition:.2s}.quality-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.live-indicator{display:inline-flex;align-items:center;gap:5px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:900;letter-spacing:1px}
+.live-indicator .dot{width:6px;height:6px;border-radius:50%;background:#ef4444;position:relative}.live-indicator .dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:rgba(239,68,68,.4);animation:plping 1s infinite}
+@keyframes plping{0%{transform:scale(1);opacity:1}100%{transform:scale(2);opacity:0}}
+/* orodha ya channels (menyu ya mistari mitatu) */
+.ch-drawer{position:fixed;top:0;right:0;bottom:0;width:min(340px,88vw);z-index:60;transform:translateX(105%);visibility:hidden;transition:transform .3s ease,visibility 0s linear .3s;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);will-change:transform}
+.ch-drawer.active{transform:none;visibility:visible;transition:transform .3s ease,visibility 0s}
+.dr-shade{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.5);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s linear .3s}.dr-shade.active{opacity:1;visibility:visible;transition:opacity .3s,visibility 0s}
+.dr-head{display:flex;align-items:center;gap:10px;padding:14px 14px 8px}.dr-head b{flex:1;font-size:1rem}
+.dr-x{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+.dr-q{margin:0 14px 8px;padding:10px 14px;border-radius:99px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font:inherit;outline:0}
+.dr-note{margin:0 14px 8px;font-size:.75rem;color:#9ca3af;background:rgba(255,255,255,.05);padding:10px 12px;border-radius:12px}.dr-note a{color:var(--primary,#6366f1);font-weight:700;text-decoration:underline}
+.dr-list{flex:1;overflow:auto;padding:0 10px 20px;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}.dr-cat{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:var(--primary,#6366f1);padding:14px 6px 6px}
+.dr-it{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:14px;cursor:pointer;border:1px solid transparent}.dr-it:hover{background:rgba(255,255,255,.08)}.dr-it.on{border-color:var(--primary,#6366f1);background:rgba(255,255,255,.08)}
+.dr-ic{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.1);display:grid;place-items:center;overflow:hidden;flex:none}.dr-ic img{width:100%!important;height:100%!important;padding:0!important;object-fit:cover!important;display:block}.dr-ic b{font-size:1.1rem}
+.dr-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.88rem;font-weight:600}
+.dr-tag{font-size:.55rem;font-weight:800;padding:3px 8px;border-radius:99px;background:var(--accent,#f5a623);color:#000}.dr-tag.free{background:#1fa35a;color:#fff}
+/* v8: logo inafiti sehemu yote, bila beji kwenye drawer */
+#chLogo{width:46px!important;height:46px!important;max-width:none!important;object-fit:cover!important;border-radius:14px!important;padding:0!important;background:rgba(255,255,255,.1)}
+.dr-ic{width:48px;height:48px;border-radius:14px}.dr-ic img{width:100%!important;height:100%!important;padding:0!important;object-fit:cover!important}
+.spinner-icon img{width:60px!important;height:60px!important;object-fit:cover!important;border-radius:18px}
+.dr-tag{display:none!important}
+.dr-q,.dr-x{font:inherit}.dr-x .ico{width:18px;height:18px}.menu-btn .ico,.back-btn .ico{width:24px;height:24px}
