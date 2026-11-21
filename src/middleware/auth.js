@@ -1,61 +1,68 @@
-const crypto = require('crypto');
-const { query } = require('../config/database');
+'use strict';
+const { query } = require('../database/pool');
+const { verifySession } = require('../services/authService');
+const { HttpError } = require('../utils/errors');
+const { safeEqual } = require('../utils/crypto');
+const { config } = require('../config');
 
-const SESSION_DAYS = Number(process.env.SESSION_DAYS || 7);
-const hash = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const COOKIE = 'sid';
 
-async function createSession(req, res, userId) {
-  const token = crypto.randomBytes(32).toString('hex');
-  // Vifaa vitatu vikiwa tayari, kuingia kwenye cha nne kunatoa vifaa vyote vingine (kinabaki kimoja tu)
-  await query('DELETE FROM sessions WHERE user_id=$1 AND (SELECT COUNT(*) FROM sessions WHERE user_id=$1) >= 3', [userId]);
-  await query("INSERT INTO sessions(token_hash,user_id,expires_at,ip,user_agent) VALUES($1,$2,now() + ($3 || ' days')::interval,$4,$5)",
-    [hash(token), userId, String(SESSION_DAYS), req.ip, (req.get('user-agent') || '').slice(0, 200)]);
-  res.cookie('sid', token, {
-    httpOnly: true, sameSite: 'lax', path: '/',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: SESSION_DAYS * 864e5,
+function setSessionCookie(res, token) {
+  res.cookie(COOKIE, token, {
+    httpOnly: true,
+    secure: config.isProd,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: config.sessionHours * 3600 * 1000,
   });
 }
+const clearSessionCookie = (res) => res.clearCookie(COOKIE, { path: '/' });
 
-async function destroySession(req, res) {
-  const t = req.cookies && req.cookies.sid;
-  if (t) {
-    // Logout kwenye kifaa kimoja inatoa vifaa vyote vya mtumiaji huyo
-    const r = await query('SELECT user_id FROM sessions WHERE token_hash=$1', [hash(t)]);
-    const uid = r.rows[0] && r.rows[0].user_id;
-    if (uid) await query('DELETE FROM sessions WHERE user_id=$1', [uid]);
-    else await query('DELETE FROM sessions WHERE token_hash=$1', [hash(t)]);
-  }
-  res.clearCookie('sid', { path: '/' });
-}
-
-async function loadUser(req) {
-  const t = req.cookies && req.cookies.sid;
-  if (!t || !/^[a-f0-9]{64}$/.test(t)) return null;
-  const r = await query(`SELECT u.id,u.name,u.phone,u.status,r.name AS role, s.created_at AS session_at
-    FROM sessions s JOIN users u ON u.id=s.user_id JOIN roles r ON r.id=u.role_id
-    WHERE s.token_hash=$1 AND s.expires_at>now()`, [hash(t)]);
-  const u = r.rows[0];
-  if (!u || u.status !== 'ACTIVE') return null;
-  // Admin: kikao kinaisha baada ya saa 12 tangu kuingia, hata kama kina muda mrefu zaidi
-  if (u.role === 'admin' && Date.now() - new Date(u.session_at).getTime() > 12 * 3600e3) return null;
-  return u;
-}
-
-const optionalAuth = async (req, res, next) => { try { req.user = await loadUser(req); next(); } catch (e) { next(e); } };
-const requireAuth = async (req, res, next) => {
+// Loads the session, re-reads the user from the DB (role/status/token_version are never trusted from the token alone).
+async function requireAuth(req, _res, next) {
   try {
-    const u = await loadUser(req);
-    if (!u) return res.status(401).json({ error: 'Tafadhali ingia kwanza.' });
-    req.user = u; next();
+    const token = req.cookies && req.cookies[COOKIE];
+    if (!token) throw new HttpError(401, 'Tafadhali ingia kwanza', 'NO_SESSION');
+    let claims;
+    try { claims = verifySession(token); } catch (_) { throw new HttpError(401, 'Session imeisha. Ingia tena.', 'BAD_SESSION'); }
+    const { rows } = await query('SELECT id, full_name, phone_number, role, account_status, token_version, created_at FROM users WHERE id=$1', [claims.sub]);
+    const u = rows[0];
+    if (!u || u.token_version !== claims.tv) throw new HttpError(401, 'Session imeisha. Ingia tena.', 'BAD_SESSION');
+    if (u.account_status !== 'ACTIVE') throw new HttpError(403, 'Akaunti yako imesimamishwa', 'ACCOUNT_SUSPENDED');
+    req.user = u;
+    req.csrf = claims.csrf;
+    next();
   } catch (e) { next(e); }
-};
+}
 
-// CSRF: cookie ni SameSite=Lax + header maalumu inahitajika kwa mabadiliko (cross-site haiwezi kuiweka bila CORS)
-function csrfGuard(req, res, next) {
+// CSRF: the cookie is SameSite=Strict AND every state-changing request must echo the per-session token in a header.
+function csrfProtect(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-  if (req.get('x-requested-with') !== 'fetch') return res.status(403).json({ error: 'Ombi limekataliwa.' });
+  const sent = req.get('x-csrf-token');
+  if (!sent || !req.csrf || !safeEqual(sent, req.csrf)) return next(new HttpError(403, 'CSRF token si sahihi. Pakia ukurasa upya.', 'BAD_CSRF'));
   next();
 }
 
-module.exports = { createSession, destroySession, optionalAuth, requireAuth, csrfGuard };
+const adminIpAllowed = (ip) => !config.adminAllowedIps.length || config.adminAllowedIps.includes(String(ip || '').replace(/^::ffff:/, ''));
+
+function requireAdmin(req, _res, next) {
+  if (!req.user || req.user.role !== 'ADMIN') return next(new HttpError(403, 'Huna ruhusa ya kufanya hili', 'FORBIDDEN'));
+  if (!adminIpAllowed(req.ip)) return next(new HttpError(403, 'Huna ruhusa ya kufanya hili', 'FORBIDDEN'));
+  next();
+}
+
+// AGENT: a restricted admin-style role (set by an admin on an existing user). Allowed only on the parts of the
+// admin panel explicitly opened up to it - currently "source" extraction and proxy channels - never on users,
+// packages, payments, settings, audit, amiriChannel or beinProxy. Same IP-allowlist gate as a full admin.
+function requireAdminOrAgent(req, _res, next) {
+  if (!req.user || (req.user.role !== 'ADMIN' && req.user.role !== 'AGENT')) return next(new HttpError(403, 'Huna ruhusa ya kufanya hili', 'FORBIDDEN'));
+  if (!adminIpAllowed(req.ip)) return next(new HttpError(403, 'Huna ruhusa ya kufanya hili', 'FORBIDDEN'));
+  next();
+}
+
+function requireUserRole(req, _res, next) {
+  if (!req.user || req.user.role !== 'USER') return next(new HttpError(403, 'Eneo hili ni la watumiaji pekee', 'FORBIDDEN'));
+  next();
+}
+
+module.exports = { adminIpAllowed, requireAuth, csrfProtect, requireAdmin, requireAdminOrAgent, requireUserRole, setSessionCookie, clearSessionCookie };

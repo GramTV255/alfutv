@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — Channel API</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/whatsapp.js" defer></script>
+  <script src="/js/dashboard.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="logo" data-icon="radio"></div><div>Channel API<small>Akaunti yangu</small></div></div>
+      <nav class="nav" id="nav">
+        <a href="/dashboard" data-view="overview" data-icon="home" data-icon-gap>Muhtasari</a>
+        <a href="/dashboard/api-key" data-view="api" data-icon="key" data-icon-gap>API Key</a>
+        <a href="/dashboard/pay" data-view="plans" data-icon="wallet" data-icon-gap>Lipia Kifurushi</a>
+        <a href="/dashboard/payments" data-view="payments" data-icon="file" data-icon-gap>Historia ya Malipo</a>
+        <a href="/dashboard/usage" data-view="usage" data-icon="activity" data-icon-gap>Matumizi ya API</a>
+        <a href="/dashboard/security" data-view="security" data-icon="shield" data-icon-gap>Usalama</a>
+        <div class="sep"></div>
+        <a href="/docs" data-icon="book" data-icon-gap>API Docs</a>
+      </nav>
+      <div class="foot nav"><button type="button" data-logout data-icon="logout" data-icon-gap>Toka</button></div>
+    </aside>
+    <div class="scrim"></div>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="row">
+          <button class="btn icon menu-btn" type="button" aria-label="Menyu" data-icon="menu"></button>
+          <h1 id="title">Muhtasari</h1>
+        </div>
+        <div class="row">
+          <button class="btn icon" data-theme-btn type="button"></button>
+          <div class="userchip"><div class="avatar" id="avatar">?</div><span class="name" id="uname"></span></div>
+        </div>
+      </div>
+      <div id="root"><div class="loader"><span class="spin"></span></div></div>
+    </main>
+  </div>
+</body>
+</html>

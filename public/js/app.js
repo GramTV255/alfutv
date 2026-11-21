@@ -1,209 +1,268 @@
-window.$ = (s, r = document) => r.querySelector(s);
-window.esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-window.fmt = (n) => new Intl.NumberFormat('sw-TZ').format(n || 0);
-window.fdate = (d) => (d ? new Date(d).toLocaleString('sw-TZ', { dateStyle: 'medium', timeStyle: 'short' }) : '-');
-window.api = async (path, opts = {}) => {
-  const o = { method: opts.method || 'GET', headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' };
-  if (opts.body !== undefined) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(opts.body); }
-  if (window.UI) UI.start();
-  try {
-    const r = await fetch('/api' + path, o);
-    let j = {}; try { j = await r.json(); } catch (_) {}
-    if (!r.ok) { const e = new Error(j.error || 'Hitilafu'); e.status = r.status; e.data = j; throw e; }
-    return j;
-  } finally { if (window.UI) UI.end(); }
-};
-window.applyTheme = (t, a) => {
-  const s = document.documentElement.style;
-  const m = window.themeVars ? window.themeVars(t) : {};
-  if (t.mode === 'light') Object.assign(m, { '--bg': '#f3f3f8', '--text': '#15151f', '--secondary': '#ffffff', '--header': '#ffffff', '--nav': '#ffffff', '--muted': '#5d5d6b' });
-  if (t.mode === 'dark') Object.assign(m, { '--bg': '#0b0b12', '--text': '#f4f4f8', '--secondary': '#1b1b29', '--header': '#12121c', '--nav': '#12121c', '--muted': '#9a9aae' });
-  Object.entries(m).forEach(([k, v]) => v && s.setProperty(k, v));
-  if (a) { s.setProperty('--logo', a.logo_size + 'px'); s.setProperty('--cols', a.columns); }
-};
-window.me = null;
-window.loadMe = async () => { try { window.me = (await api('/auth/me')).user; } catch (_) { window.me = null; } return window.me; };
-const ICONS = {
-  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
-  packages: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
-  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
-  matches: '<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 5h-5L8 10z"/><path d="M12 3v4M3.5 9.5l4.5.5M20.5 9.5l-4.5.5M7 19l1.5-3M17 19l-1.5-3"/>',
-};
-/* ---- Ukaguzi wa papo hapo channel ikibonyezwa ---- */
-window.gate = (reason, id, offer, opts = {}) => {
-  if (reason === 'match' && offer) {
-    const old = $('#gm'); if (old) old.remove();
-    const q = `/packages?match=${offer.match_id}&price=${offer.price}&name=${encodeURIComponent(offer.title || 'Mechi')}`;
-    document.body.insertAdjacentHTML('beforeend', `<div class="modal" id="gm"><div class="mbox"><div class="mico">⚽</div>
-      <h3>Lipia mechi hii</h3><p class="muted">${esc(offer.title || '')}<br>Bei: ${fmt(offer.price)} TZS. Baada ya malipo utaweza kuitazama mechi.</p>
-      <div class="mact"><a class="btn" href="${q}">💳 Lipia TZS ${fmt(offer.price)}</a><button class="btn ghost" id="gx">Funga</button></div></div></div>`);
-    $('#gx').onclick = () => $('#gm').remove(); $('#gm').onclick = (e) => { if (e.target.id === 'gm') $('#gm').remove(); };
-    return;
-  }
-  const old = $('#gm'); if (old) old.remove();
-  const login = reason === 'login', nxt = encodeURIComponent('/live-tv?ch=' + id);
-  const one = offer ? `<a class="btn ghost" href="/packages?channel=${id}">Lipia channel hii • ${fmt(offer.price)} TZS / siku ${offer.days}</a>` : '';
-  document.body.insertAdjacentHTML('beforeend', `<div class="modal" id="gm"><div class="mbox"><div class="mico">${login ? '🔐' : '💎'}</div>
-    <h3>${login ? 'Ingia kuendelea' : 'Unahitaji kifurushi'}</h3>
-    <p class="muted">${login ? 'Ingia au jisajili, kisha chagua kifurushi ili kutazama channel hii.' : 'Nunua kifurushi ufungue channel zote' + (offer ? ', au lipia channel hii peke yake.' : '.')}</p>
-    <div class="mact">${login ? `<a class="btn" href="/login?next=${nxt}">Ingia</a><a class="btn ghost" href="/register?next=${nxt}">Jisajili</a>` : `<a class="btn" href="/packages">Angalia vifurushi</a>${one}`}<button class="btn ghost" id="gx">Funga</button></div></div></div>`);
-  const close = () => { const e = $('#gm'); if (e) e.remove(); if (opts.onClose) opts.onClose(); };
-  $('#gx').onclick = close; $('#gm').onclick = (e) => { if (e.target.id === 'gm') close(); };
-};
-window.openChannel = async (id) => {
-  try { const r = await api(`/channels/${id}/access`); if (r.allowed) location.href = '/live-tv?ch=' + id; else gate(r.reason, id, r.offer); }
-  catch (e) { alert(e.message); }
-};
-window.banner = (n) => {
-  const el = document.createElement('div');
-  el.className = 'nbanner';
-  el.innerHTML = `<span class="nb-ic">🔔</span><div class="nb-t"><b>${esc(n.title)}</b><span>${esc(n.body)}</span></div><button class="nb-x" aria-label="Funga">✕</button>`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('in'));
-  el.onclick = (e) => { if (e.target.closest('.nb-x')) return; el.remove(); window.openNotes(); };
-  el.querySelector('.nb-x').onclick = (e) => { e.stopPropagation(); el.remove(); };
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 6500);
-};
-window.askNotifPerm = () => {
-  if (!('Notification' in window) || Notification.permission !== 'default' || localStorage.getItem('notif-asked')) return;
-  const el = document.createElement('div');
-  el.className = 'nbanner ask';
-  el.innerHTML = `<span class="nb-ic">🔔</span><div class="nb-t"><b>Ruhusu arifa?</b><span>Pata taarifa za ofa, vifurushi na matangazo papo hapo.</span><div class="nb-btns"><button class="btn sm" id="nok">Ruhusu</button><button class="btn sm ghost" id="nlater">Baadaye</button></div></div>`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('in'));
-  el.querySelector('#nok').onclick = async () => {
-    localStorage.setItem('notif-asked', '1'); el.remove();
-    try { const p = await Notification.requestPermission(); if (p === 'granted') window.banner({ title: 'Arifa zimewashwa ✅', body: 'Utapata taarifa mpya hapa.' }); } catch (_) {}
-  };
-  el.querySelector('#nlater').onclick = () => { localStorage.setItem('notif-asked', '1'); el.remove(); };
-};
-window.sysNotify = async (n) => {
-  const opts = { body: n.body, icon: '/assets/logo.png', badge: '/assets/logo.png', tag: 'n' + n.id, data: { url: '/' } };
-  try { const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration()); if (reg) return reg.showNotification(n.title, opts); } catch (_) {}
-  try { new Notification(n.title, opts); } catch (_) {}
-};
-window.initNotifs = () => {
-  if (!('Notification' in window) || !window.me) return;
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  window.askNotifPerm();
-  const key = 'nid:' + window.me.id;
-  let last = Number(localStorage.getItem(key) || 0);
-  const tick = async () => {
-    let r; try { r = await api('/notifications'); } catch (_) { return; }
-    const items = r.items || [];
-    if (!last && items.length) { last = Math.max(...items.map((n) => n.id)); localStorage.setItem(key, last); return; }
-    const fresh = items.filter((n) => !n.is_read && n.id > last).sort((a, b) => a.id - b.id);
-    for (const n of fresh) {
-      last = Math.max(last, n.id);
-      if (Notification.permission === 'granted') window.sysNotify(n);
-      if (!document.hidden || Notification.permission !== 'granted') window.banner(n);
-    }
-    if (fresh.length) localStorage.setItem(key, last);
-    if (window.refreshBadge) window.refreshBadge();
-  };
-  tick(); setInterval(() => { if (!document.hidden) tick(); }, 30000);
-};
-window.refreshBadge = async () => {
-  try { const r = await api('/notifications'); const b = $('#nbadge'); if (b) { b.hidden = !r.unread; b.textContent = r.unread > 9 ? '9+' : r.unread; } } catch (_) {}
-};
-window.openNotes = async () => {
-  if ($('#nsheet')) return;
-  document.body.insertAdjacentHTML('beforeend', `<div class="nsheet" id="nsheet"><div class="nsh-bg" id="nsbg"></div><div class="nsh-box">
-    <div class="nsh-head"><div><b>Arifa</b><div class="muted" id="nsn" style="font-size:.74rem"></div></div><div style="display:flex;gap:8px"><button class="ib2" id="nall" title="Soma zote">✓</button><button class="ib2" id="nx" title="Funga">✕</button></div></div>
-    <div class="nsh-list" id="nlist"><div class="muted" style="padding:16px">Inapakia…</div></div></div></div>`);
-  const close = () => { const e = $('#nsheet'); if (e) e.remove(); };
-  $('#nx').onclick = close; $('#nsbg').onclick = close;
-  const draw = (r) => {
-    $('#nsn').textContent = r.unread ? r.unread + ' hazijasomwa' : 'Zote umeshazisoma';
-    $('#nlist').innerHTML = r.items.length ? r.items.map((n) => `<button class="nitem ${n.is_read ? '' : 'un'}" data-id="${n.id}"><span class="nic">🔔</span><span class="nbody"><b>${esc(n.title)}</b><span>${esc(n.body)}</span><small>${fdate(n.created_at)}</small></span>${n.is_read ? '' : '<i class="ndot"></i>'}</button>`).join('') : '<div class="muted" style="padding:20px;text-align:center">Hakuna arifa bado.</div>';
-    document.querySelectorAll('#nlist .nitem').forEach((b) => (b.onclick = async () => { if (b.classList.contains('un')) { b.classList.remove('un'); b.querySelector('.ndot')?.remove(); await api('/notifications/' + b.dataset.id + '/read', { method: 'POST' }).catch(() => {}); window.refreshBadge(); } }));
-  };
-  try { draw(await api('/notifications')); } catch (e) { $('#nlist').innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
-  $('#nall').onclick = async () => { await api('/notifications/read-all', { method: 'POST' }).catch(() => {}); draw(await api('/notifications')); window.refreshBadge(); };
-};
-window.openSearch = async () => {
-  if ($('#so')) return;
-  document.body.insertAdjacentHTML('beforeend', `<div class="so" id="so"><div class="sobar"><input id="sq" placeholder="Tafuta channel…" autocomplete="off"><button class="ib2" id="sx" aria-label="Funga">✕</button></div><div class="sres" id="sr"><div class="muted" style="padding:14px">Inapakia…</div></div></div>`);
-  const close = () => { const e = $('#so'); if (e) e.remove(); document.removeEventListener('keydown', onKey); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
-  document.addEventListener('keydown', onKey); $('#sx').onclick = close;
-  if (!window._chs) { try { const r = await api('/channels'); window._chs = r.channels; window._sub = r.subscribed; } catch (_) { window._chs = []; } }
-  const draw = (q) => {
-    const list = window._chs.filter((c) => !q || c.name.toLowerCase().includes(q) || (c.category || '').toLowerCase().includes(q)).slice(0, 40);
-    $('#sr').innerHTML = list.length ? list.map((c) => `<button class="sit" data-id="${c.id}"><span class="sico" style="--h:${chHue(c.name)}">${chLogo(c)}</span><div><b>${esc(c.name)}</b><div class="muted">${esc(c.category || '')}</div></div>${c.access_type === 'PAID' && !window._sub && !c.owned ? `<span class="sit-lock">${LOCK_SVG}</span>` : '<span class="go">▶</span>'}</button>`).join('') : '<div class="muted" style="padding:14px">Hakuna matokeo.</div>';
-    document.querySelectorAll('.sit').forEach((b) => (b.onclick = () => openChannel(b.dataset.id)));
-  };
-  $('#sq').oninput = (e) => draw(e.target.value.trim().toLowerCase()); draw(''); $('#sq').focus();
-};
-(async () => {
-  let site = {};
-  try { site = await api('/site/settings'); } catch (_) {}
-  window.site = site;
-  if (site.theme) applyTheme(site.theme, site.appearance);
-  const id = site.identity || {};
-  document.title = (id.site_name || 'TV') + ' - ' + document.title;
-  if (id.favicon) { const l = document.createElement('link'); l.rel = 'icon'; l.href = id.favicon; document.head.appendChild(l); }
-  await loadMe();
-  const page = document.body.dataset.page;
-  // Admin akiwa tayari ameingia akifungua kurasa za user, anapelekwa moja kwa moja kwenye admin panel
-  // (Alfu Store inabaki wazi kwa kuangalia)
-  if (window.me && window.me.role === 'admin' && page !== 'download') {
-    location.replace('/admin/dashboard');
-    return;
-  }
-  if (page !== 'live' && page !== 'category') {   // Live TV na kategoria: hakuna header wala nav
-    const hdr = $('#hdr');
-    if (hdr) hdr.innerHTML = `<header class="top"><div class="bar">
-      <a class="brand" href="/">${id.logo ? `<img src="${esc(id.logo)}" alt="">` : '<span class="logo-dot">▶</span>'}<span>${esc(id.site_name || 'TV')}</span></a>
-      <div class="hdr-acts"><a class="ib2 hbtn" href="/store" aria-label="Alfu Store" title="Alfu Store">${window.SVG ? window.SVG.store : ''}</a>${window.me ? `<button class="ib2 hbtn" id="nbtn" aria-label="Arifa" title="Arifa"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="nbadge" id="nbadge" hidden></span></button>` : ''}<button class="ib2 hbtn" id="rbtn" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg></button><button class="ib2 hbtn" id="sbtn" aria-label="Tafuta" title="Tafuta"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button></div></div></header>`;
-    const sb = $('#sbtn'); if (sb) sb.onclick = () => window.openSearch();
-    const nb = $('#nbtn'); if (nb) { nb.onclick = () => window.openNotes(); window.refreshBadge(); setInterval(() => { if (!document.hidden) window.refreshBadge(); }, 60000); }
-    window.initNotifs();
-    const rb = $('#rbtn'); if (rb) rb.onclick = () => { rb.classList.add('spin'); if (window.UI) UI.nav('Inaonyesha upya…'); setTimeout(() => location.reload(), 180); };
-    const items = [['/', 'Home', 'home'], ['/packages', 'Packages', 'packages'], ['/profile', 'Profile', 'profile']];
-    document.body.classList.add('has-nav');
-    document.body.insertAdjacentHTML('beforeend', `<nav class="bnav">${items.map((n) => `<a href="${n[0]}" class="${n[2] === page ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n[2]]}</svg>${n[1]}</a>`).join('')}</nav>`);
-    const g = site.general || {};
-    if (g.whatsapp_number) document.body.insertAdjacentHTML('beforeend', `<a class="wa" href="https://wa.me/${esc(g.whatsapp_number)}?text=${encodeURIComponent(g.whatsapp_message || '')}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.08-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.05 21.8h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88 2.64 0 5.12 1.03 6.99 2.9a9.82 9.82 0 0 1 2.89 6.99c0 5.45-4.44 9.88-9.88 9.88zM20.46 3.49A11.8 11.8 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.42z"/></svg></a>`);
-    api('/matches').then((r) => {   // kitufe cha Mechi kinaonekana kwa wote, wakiwa wameingia au la
-      const nav = $('.bnav');
-      if (!nav || !(r.matches || []).length || nav.querySelector('[data-mech]')) return;
-      const a = document.createElement('a');
-      a.href = '/matches'; a.setAttribute('data-mech', '1');
-      if (page === 'matches') a.classList.add('on');
-      a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS.matches}</svg>Mechi`;
-      (nav.children[0] || nav.firstChild) && nav.children[0].after(a);
-    }).catch(() => {});
-    const f = site.footer || {}, ftr = $('#ftr');
-    const links = `${f.privacy_url ? `<a href="${esc(f.privacy_url)}"><u>Privacy</u></a> ` : ''}${f.terms_url ? `<a href="${esc(f.terms_url)}"><u>Terms</u></a> ` : ''}${(f.links || []).map((l) => `<a href="${esc(l.url)}"><u>${esc(l.label)}</u></a> `).join('')}`;
-    if (ftr && (f.contact || links.trim())) ftr.innerHTML = `<footer class="foot" style="text-align:center;color:var(--muted);font-size:.8rem;padding:10px 16px 24px">${f.contact ? `<div>${esc(f.contact)}</div>` : ''}${links.trim() ? `<div>${links}</div>` : ''}</footer>`;
-  }
-  // WhatsApp kwenye ukurasa wa kategoria (ukurasa huu hauna kichwa wala nav)
-  if (page === 'category') { const g = site.general || {}; if (g.whatsapp_number) document.body.insertAdjacentHTML('beforeend', `<a class="wa" href="https://wa.me/${esc(g.whatsapp_number)}?text=${encodeURIComponent(g.whatsapp_message || '')}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.08-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.05 21.8h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88 2.64 0 5.12 1.03 6.99 2.9a9.82 9.82 0 0 1 2.89 6.99c0 5.45-4.44 9.88-9.88 9.88zM20.46 3.49A11.8 11.8 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.42z"/></svg></a>`); }
-  document.dispatchEvent(new Event('app:ready'));
-})();
+/* Shared front-end helpers (no inline scripts anywhere: the CSP only allows files from this site) */
+(function () {
+  'use strict';
 
-// Kitufe cha "Fungua kwenye app": Android (intent) na iPhone (link ya App Store)
-document.addEventListener('app:ready', async () => {
-  const page = document.body.dataset.page;
-  if (page === 'live' || page === 'category' || page === 'admin') return;
-  if (sessionStorage.getItem('oapp_x')) return;
-  const ua = navigator.userAgent || '';
-  const isAndroid = /Android/i.test(ua), isIOS = /iPhone|iPad|iPod/i.test(ua);
-  if (!isAndroid && !isIOS) return;
-  let cfg = {};
-  try { cfg = await fetch('/api/app-links', { credentials: 'same-origin' }).then((r) => r.json()); } catch (_) { return; }
-  let href = '';
-  if (isAndroid && cfg.android_package) {
-    const u = new URL(location.href);
-    href = 'intent://' + u.host + u.pathname + u.search + '#Intent;scheme=https;package=' + cfg.android_package + ';S.browser_fallback_url=' + encodeURIComponent(location.href) + ';end';
-  } else if (isIOS && cfg.ios_app_url) {
-    href = cfg.ios_app_url;
-  }
-  if (!href) return;
-  const bar = document.createElement('div');
-  bar.className = 'oapp';
-  bar.innerHTML = '<span>Fungua kwenye app yetu kwa uzoefu bora</span><a class="btn sm" href="' + href.replace(/"/g, '&quot;') + '">Fungua app</a><button class="oapp-x" aria-label="Funga">✕</button>';
-  document.body.appendChild(bar);
-  bar.querySelector('.oapp-x').onclick = () => { sessionStorage.setItem('oapp_x', '1'); bar.remove(); };
-});
+  // ---------- Icons (inline SVG, stroke style) ----------
+  const P = {
+    home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3"/><path d="M16 7l3 3"/><path d="M14 9l2 2"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
+    activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+    users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/><path d="M16 4.5a3.5 3.5 0 010 7"/><path d="M18 14.8c2.4.6 4 2.3 4 5.2"/>',
+    shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    package: '<path d="M21 8l-9-5-9 5 9 5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+    link: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+    radio: '<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 010 8.4M7.8 16.2a6 6 0 010-8.4"/><path d="M19.1 4.9a10 10 0 010 14.2M4.9 19.1a10 10 0 010-14.2"/>',
+    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+    chat: '<path d="M21 11.5a8.4 8.4 0 01-12.4 7.4L3 20l1.2-5.4A8.4 8.4 0 1121 11.5z"/>',
+    logout: '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 10v6M14 10v6"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+    refresh: '<path d="M21 12a9 9 0 01-15.5 6.2L3 16"/><path d="M3 12A9 9 0 0118.5 5.8L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/>',
+    book: '<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 21.5z"/><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>',
+    menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+    alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+    zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
+    eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    wallet: '<path d="M3 7a2 2 0 012-2h13v4"/><path d="M3 7v11a2 2 0 002 2h15V9H5a2 2 0 01-2-2z"/><circle cx="16.5" cy="14.5" r="1.2"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    play: '<path d="M7 4l13 8-13 8z"/>',
+    x: '<path d="M18 6L6 18M6 6l12 12"/>',
+    server: '<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01"/>',
+    file: '<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+    upload: '<path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M21 13A9 9 0 1111 3a7 7 0 0010 10z"/>',
+    trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>',
+    layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  };
+  window.icon = (name, extra) => `<svg class="ico ${extra || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
+
+  // ---------- Helpers ----------
+  window.$ = (s, r) => (r || document).querySelector(s);
+  window.$$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  window.esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  window.fmtMoney = (n) => `TZS ${Number(n || 0).toLocaleString('en-US')}`;
+  window.fmtDate = (d) => (d ? new Date(d).toLocaleString('sw-TZ', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
+  window.fmtDay = (d) => (d ? new Date(d).toLocaleDateString('sw-TZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+  window.fmtRemaining = (sec) => {
+    sec = Math.max(0, Math.floor(sec));
+    const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    if (d > 0) return `siku ${d}, saa ${h}`;
+    if (h > 0) return `saa ${h}, dk ${m}`;
+    return `dk ${m}, sek ${s}`;
+  };
+  const BADGES = {
+    ACTIVE: ['ok', 'ACTIVE'], SUCCESS: ['ok', 'SUCCESS'], VALID: ['ok', 'VALID'],
+    INACTIVE: ['warn', 'INACTIVE'], PENDING: ['warn', 'PENDING'], PROCESSING: ['warn', 'PROCESSING'], EXPIRED: ['bad', 'EXPIRED'],
+    SUSPENDED: ['bad', 'SUSPENDED'], FAILED: ['bad', 'FAILED'], REVOKED: ['bad', 'REVOKED'], DISABLED: ['mute', 'DISABLED'],
+    NONE: ['mute', 'NONE'], EMPTY: ['mute', 'EMPTY'], SUPERSEDED: ['mute', 'SUPERSEDED'],
+  };
+  window.badge = (s) => { const b = BADGES[s] || ['mute', s || '—']; return `<span class="badge ${b[0]}">${esc(b[1])}</span>`; };
+
+  window.toast = (msg, type) => {
+    let box = $('.toasts');
+    if (!box) { box = document.createElement('div'); box.className = 'toasts'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
+    const t = document.createElement('div');
+    t.className = `toast ${type || 'info'}`;
+    t.innerHTML = `${icon(type === 'ok' ? 'check' : type === 'err' ? 'alert' : 'info')}<div>${esc(msg)}</div>`;
+    box.appendChild(t);
+    setTimeout(() => t.remove(), type === 'err' ? 6500 : 4000);
+  };
+
+  window.copyText = async (text, btn) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (__) { /* ignore */ } ta.remove();
+    }
+    toast('Imenakiliwa', 'ok');
+    if (btn) { const o = btn.innerHTML; btn.innerHTML = icon('check') + ' Imenakiliwa'; setTimeout(() => (btn.innerHTML = o), 1500); }
+  };
+
+  // ---------- API ----------
+  let csrf = null;
+  window.setCsrf = (t) => { csrf = t; };
+  window.api = async (path, opts) => {
+    opts = opts || {};
+    const headers = { Accept: 'application/json' };
+    let body;
+    if (opts.rawBody !== undefined) { headers['Content-Type'] = opts.rawType || 'application/octet-stream'; body = opts.rawBody; } // a File/Blob sent as-is (e.g. an image upload), never JSON-wrapped
+    else if (opts.body !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(opts.body); }
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+    let res;
+    try {
+      res = await fetch(path, { method: opts.method || 'GET', headers, credentials: 'same-origin', body });
+    } catch (_) { throw new Error('Hakuna mtandao. Angalia muunganisho wako.'); }
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON */ }
+    if (!res.ok) {
+      if (res.status === 401 && !opts.noRedirect && !/\/api\/auth\/(login|register|forgot|reset)/.test(path)) { location.href = '/login'; }
+      const err = new Error((data && data.error) || `Hitilafu (${res.status})`);
+      err.status = res.status; err.code = data && data.code; err.data = data;
+      throw err;
+    }
+    return data;
+  };
+
+  // Loads the session; redirects when the role does not match this page.
+  window.requireSession = async (role) => {
+    try {
+      const me = await api('/api/auth/me', { noRedirect: true });
+      setCsrf(me.csrf);
+      if (window.initProfile) initProfile(me);
+      // AGENT is a restricted admin-style role: anywhere a page asks for 'ADMIN', an AGENT session is accepted
+      // too (the admin panel itself then hides/blocks whatever that agent isn't allowed to see).
+      const ok = !role || me.role === role || (role === 'ADMIN' && me.role === 'AGENT');
+      if (!ok) { location.replace(me.role === 'ADMIN' || me.role === 'AGENT' ? '/admin' : '/dashboard'); return null; }
+      return me;
+    } catch (_) { location.replace('/login'); return null; }
+  };
+  // Profile button (top right): opens a small menu with the account details, change password and logout.
+  window.initProfile = (me) => {
+    const chip = $('.userchip');
+    if (!chip || chip.dataset.ready) return;
+    chip.dataset.ready = '1';
+    chip.setAttribute('role', 'button'); chip.setAttribute('tabindex', '0'); chip.setAttribute('aria-haspopup', 'menu'); chip.style.cursor = 'pointer';
+    const isAdmin = me.role === 'ADMIN';
+    const isAgent = me.role === 'AGENT';
+    const isStaff = isAdmin || isAgent;
+    let menu = null;
+    const close = () => { if (menu) { menu.remove(); menu = null; } };
+    const open = () => {
+      if (menu) return close();
+      menu = document.createElement('div');
+      menu.className = 'profile-menu'; menu.setAttribute('role', 'menu');
+      const initial = esc((me.full_name || '?').trim().charAt(0).toUpperCase());
+      menu.innerHTML = `<div class="pm-banner"><div class="pm-avatar">${initial}</div>
+          <div class="pm-id"><div class="pm-name">${esc(me.full_name)}</div><div class="pm-phone">${esc(me.phone_number)}</div></div>
+          <span class="pm-role">${isAdmin ? 'ADMIN' : isAgent ? 'AGENT' : 'MTEJA'}</span></div>
+        <div class="pm-since">${icon('clock')} Alijisajili ${esc(fmtDay(me.created_at))}</div>
+        <div class="pm-list">
+          ${isStaff ? `<a class="pm-item" href="/admin" role="menuitem"><i>${icon('home')}</i><span>Dashboard ya admin</span></a>` : `<a class="pm-item" href="/dashboard" role="menuitem"><i>${icon('home')}</i><span>Dashboard</span></a>
+          <a class="pm-item" href="/dashboard/security" role="menuitem"><i>${icon('shield')}</i><span>Akaunti na usalama</span></a>`}
+          <button class="pm-item" type="button" id="pm-pw" role="menuitem"><i>${icon('lock')}</i><span>Badilisha password</span></button>
+          <a class="pm-item" href="/docs" role="menuitem"><i>${icon('book')}</i><span>API Docs</span></a>
+        </div>
+        <button class="pm-item pm-out" type="button" id="pm-out" role="menuitem"><i>${icon('logout')}</i><span>Toka</span></button>`;
+      document.body.appendChild(menu);
+      const r = chip.getBoundingClientRect();
+      menu.style.top = `${r.bottom + 10}px`; menu.style.right = `${Math.max(10, window.innerWidth - r.right)}px`;
+      menu.querySelector('#pm-out').onclick = () => logout();
+      menu.querySelectorAll('a.pm-item').forEach((a) => a.addEventListener('click', close));
+      menu.querySelector('#pm-pw').onclick = () => { close(); passwordModal(); };
+    };
+    const passwordModal = () => {
+      const m = openModal(`<h3>${icon('lock')} Badilisha password</h3>
+        <div class="field"><label>Password ya sasa</label><input class="input" type="password" id="pw0" autocomplete="current-password"></div>
+        <div class="field"><label>Password mpya</label><input class="input" type="password" id="pw1" autocomplete="new-password"><div class="hint">Angalau herufi 8, ikiwa na herufi na namba.</div></div>
+        <div class="field"><label>Thibitisha password mpya</label><input class="input" type="password" id="pw2" autocomplete="new-password"></div>
+        <div class="actions"><button class="btn" data-close>Ghairi</button><button class="btn primary" id="pw-save">Hifadhi</button></div>`);
+      m.$('#pw-save').onclick = () => withBusy(m.$('#pw-save'), async () => {
+        try {
+          const r = await api('/api/auth/change-password', { method: 'POST', body: { currentPassword: m.$('#pw0').value, newPassword: m.$('#pw1').value, confirmPassword: m.$('#pw2').value } });
+          if (r.csrf) setCsrf(r.csrf);
+          m.close(); toast('Password imebadilishwa', 'ok');
+        } catch (e) { toast(e.message, 'err'); }
+      });
+    };
+    chip.addEventListener('click', (e) => { e.stopPropagation(); open(); });
+    chip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    document.addEventListener('click', (e) => { if (menu && !menu.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', close);
+  };
+
+  window.logout = async () => { try { await api('/api/auth/logout', { method: 'POST', noRedirect: true }); } catch (_) { /* ignore */ } location.href = '/login'; };
+
+  // Path router (no #hash): base='/admin', map={ '': 'dashboard', users: 'users', ... } -> view name from the URL
+  window.makeRouter = (base, map, onChange) => {
+    const views = Object.values(map);
+    const current = () => {
+      const p = location.pathname.replace(/\/+$/, '');
+      const key = p === base ? '' : p.startsWith(base + '/') ? p.slice(base.length + 1) : '';
+      return map[key] || views[0];
+    };
+    const hrefOf = (view) => { const k = Object.keys(map).find((x) => map[x] === view); return k ? `${base}/${k}` : base; };
+    // old bookmarks like /dashboard#plans
+    const legacy = (location.hash || '').slice(1);
+    if (legacy && views.includes(legacy)) history.replaceState(null, '', hrefOf(legacy));
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest && e.target.closest('a[href]');
+      if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
+      const h = a.getAttribute('href');
+      if (h !== base && !h.startsWith(base + '/')) return;
+      e.preventDefault();
+      if (h !== location.pathname) history.pushState(null, '', h);
+      onChange();
+    });
+    window.addEventListener('popstate', onChange);
+    return { current, hrefOf };
+  };
+
+  // WhatsApp glyph (filled)
+  window.waIcon = () => '<svg viewBox="0 0 32 32" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M16.04 3C9.4 3 4 8.4 4 15.03c0 2.12.55 4.18 1.6 6L4 29l8.17-1.57A12 12 0 0016.04 27C22.67 27 28 21.6 28 14.97 28 8.4 22.67 3 16.04 3zm0 21.96c-1.8 0-3.55-.48-5.08-1.4l-.36-.22-4.85.93.98-4.72-.24-.38A9.9 9.9 0 016.1 15c0-5.46 4.46-9.9 9.94-9.9 5.45 0 9.9 4.44 9.9 9.9 0 5.5-4.45 9.96-9.9 9.96zm5.43-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.8-1.49-1.78-1.66-2.08-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.22 3.08.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.23 1.36.2 1.88.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/></svg>';
+
+  // Busy-state button helper
+  window.withBusy = async (btn, fn) => {
+    if (btn.disabled) return;
+    const html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+    try { return await fn(); } finally { btn.disabled = false; btn.innerHTML = html; }
+  };
+
+  // ---------- Modal ----------
+  window.openModal = (html, { wide } = {}) => {
+    const back = document.createElement('div');
+    back.className = 'modal-back';
+    back.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div>`;
+    const close = () => back.remove();
+    back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+    document.addEventListener('keydown', function onKey(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } });
+    document.body.appendChild(back);
+    $$('[data-close]', back).forEach((b) => b.addEventListener('click', close));
+    const first = $('input, select, textarea', back); if (first) first.focus();
+    return { el: back, close, $: (s) => $(s, back) };
+  };
+  window.confirmBox = (title, text, okLabel, danger) => new Promise((resolve) => {
+    const m = openModal(`<h3>${esc(title)}</h3><p class="muted">${esc(text)}</p>
+      <div class="actions"><button class="btn" data-close>Ghairi</button><button class="btn ${danger ? 'danger' : 'primary'}" id="cf-ok">${esc(okLabel || 'Endelea')}</button></div>`);
+    m.$('#cf-ok').addEventListener('click', () => { m.close(); resolve(true); });
+    m.el.addEventListener('click', (e) => { if (e.target === m.el || e.target.hasAttribute('data-close')) resolve(false); });
+  });
+
+  // ---------- Theme ----------
+  const applyTheme = (t) => { document.documentElement.setAttribute('data-theme', t); };
+  let saved = null; try { saved = localStorage.getItem('theme'); } catch (_) { /* ignore */ }
+  applyTheme(saved || (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  window.toggleTheme = () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    applyTheme(next); try { localStorage.setItem('theme', next); } catch (_) { /* ignore */ }
+    $$('[data-theme-btn]').forEach((b) => (b.innerHTML = icon(next === 'light' ? 'moon' : 'sun')));
+  };
+  document.addEventListener('DOMContentLoaded', () => {
+    $$('[data-theme-btn]').forEach((b) => {
+      b.innerHTML = icon(document.documentElement.getAttribute('data-theme') === 'light' ? 'moon' : 'sun');
+      b.addEventListener('click', toggleTheme);
+      b.setAttribute('aria-label', 'Badilisha theme');
+    });
+    $$('[data-icon]').forEach((el) => { el.insertAdjacentHTML('afterbegin', icon(el.getAttribute('data-icon')) + (el.hasAttribute('data-icon-gap') ? ' ' : '')); });
+    $$('[data-logout]').forEach((b) => b.addEventListener('click', logout));
+    // mobile sidebar
+    const sb = $('.sidebar'), scrim = $('.scrim');
+    $$('.menu-btn').forEach((b) => b.addEventListener('click', () => { sb.classList.toggle('open'); scrim.classList.toggle('show'); }));
+    if (scrim) scrim.addEventListener('click', () => { sb.classList.remove('open'); scrim.classList.remove('show'); });
+    // copy buttons in static docs
+    $$('[data-copy-target]').forEach((b) => b.addEventListener('click', () => copyText($(b.getAttribute('data-copy-target')).textContent, b)));
+  });
+})();
